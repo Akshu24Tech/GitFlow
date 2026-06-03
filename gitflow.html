@@ -1,0 +1,1398 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>GitFlow — Understand Any Codebase Instantly</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet"/>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<style>
+  :root {
+    --bg: #080c10;
+    --surface: #0d1117;
+    --surface2: #161b22;
+    --border: #21262d;
+    --accent: #00ff88;
+    --accent2: #00b8ff;
+    --accent3: #ff6b35;
+    --text: #e6edf3;
+    --text-muted: #7d8590;
+    --text-dim: #3d444d;
+    --green-glow: 0 0 20px rgba(0,255,136,0.3);
+    --blue-glow: 0 0 20px rgba(0,184,255,0.3);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Syne', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Grid background */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(0,255,136,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,255,136,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* Ambient glow blobs */
+  .ambient {
+    position: fixed;
+    border-radius: 50%;
+    filter: blur(80px);
+    pointer-events: none;
+    z-index: 0;
+  }
+  .ambient-1 {
+    width: 500px; height: 500px;
+    background: rgba(0,255,136,0.04);
+    top: -100px; left: -100px;
+  }
+  .ambient-2 {
+    width: 400px; height: 400px;
+    background: rgba(0,184,255,0.04);
+    bottom: -50px; right: -50px;
+  }
+
+  .container {
+    position: relative;
+    z-index: 1;
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 0 24px 80px;
+  }
+
+  /* Header */
+  header {
+    padding: 48px 0 40px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .logo-row {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+
+  .logo-icon {
+    width: 40px; height: 40px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    box-shadow: var(--green-glow);
+    flex-shrink: 0;
+  }
+
+  .logo-text {
+    font-size: 28px;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+  }
+
+  .logo-text span {
+    color: var(--accent);
+  }
+
+  .tagline {
+    font-family: 'Space Mono', monospace;
+    font-size: 12px;
+    color: var(--text-muted);
+    letter-spacing: 0.05em;
+    padding-left: 54px;
+  }
+
+  .tagline .blink {
+    color: var(--accent);
+    animation: blink 1.2s step-end infinite;
+  }
+  @keyframes blink { 50% { opacity: 0; } }
+
+  /* Input card */
+  .input-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 28px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .input-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--accent), transparent);
+    opacity: 0.6;
+  }
+
+  .field-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  label {
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    color: var(--text-muted);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  .input-row {
+    display: flex;
+    gap: 10px;
+  }
+
+  input {
+    flex: 1;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 16px;
+    color: var(--text);
+    font-family: 'Space Mono', monospace;
+    font-size: 13px;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+
+  input::placeholder { color: var(--text-dim); }
+
+  input:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(0,255,136,0.1);
+  }
+
+  /* Settings row */
+  .settings-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+
+  select {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 16px;
+    color: var(--text);
+    font-family: 'Space Mono', monospace;
+    font-size: 12px;
+    outline: none;
+    cursor: pointer;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%237d8590' viewBox='0 0 16 16'%3E%3Cpath d='M7.247 11.14L2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 14px center;
+    transition: border-color 0.2s;
+  }
+
+  select:focus { border-color: var(--accent2); }
+  select option { background: var(--surface2); }
+
+  /* Analyze button */
+  .btn-analyze {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    background: var(--accent);
+    color: #000;
+    border: none;
+    border-radius: 10px;
+    padding: 14px 28px;
+    font-family: 'Syne', sans-serif;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+    letter-spacing: 0.02em;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .btn-analyze::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: rgba(255,255,255,0.2);
+    opacity: 0;
+    transition: opacity 0.2s;
+  }
+
+  .btn-analyze:hover { transform: translateY(-1px); box-shadow: var(--green-glow); }
+  .btn-analyze:hover::after { opacity: 1; }
+  .btn-analyze:active { transform: translateY(0); }
+  .btn-analyze:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+  .btn-icon { font-size: 18px; }
+
+  /* Status / Terminal log */
+  .terminal {
+    background: #020408;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px 20px;
+    font-family: 'Space Mono', monospace;
+    font-size: 12px;
+    display: none;
+    flex-direction: column;
+    gap: 4px;
+    max-height: 180px;
+    overflow-y: auto;
+  }
+
+  .terminal.visible { display: flex; }
+
+  .log-line {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    animation: fadeSlideIn 0.2s ease;
+  }
+
+  @keyframes fadeSlideIn {
+    from { opacity: 0; transform: translateY(4px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .log-prefix { color: var(--accent); flex-shrink: 0; }
+  .log-text { color: var(--text-muted); line-height: 1.5; }
+  .log-text.success { color: var(--accent); }
+  .log-text.error { color: #ff5555; }
+  .log-text.info { color: var(--accent2); }
+
+  /* Progress bar */
+  .progress-bar {
+    height: 2px;
+    background: var(--border);
+    border-radius: 1px;
+    overflow: hidden;
+    display: none;
+  }
+
+  .progress-bar.visible { display: block; }
+
+  .progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    border-radius: 1px;
+    width: 0%;
+    transition: width 0.4s ease;
+    position: relative;
+  }
+
+  .progress-fill::after {
+    content: '';
+    position: absolute;
+    right: 0; top: 0; bottom: 0;
+    width: 40px;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4));
+  }
+
+  /* Result section */
+  .result-section {
+    display: none;
+    flex-direction: column;
+    gap: 20px;
+    animation: fadeSlideIn 0.4s ease;
+  }
+
+  .result-section.visible { display: flex; }
+
+  .result-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  .result-title {
+    font-size: 18px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .badge {
+    background: rgba(0,255,136,0.1);
+    border: 1px solid rgba(0,255,136,0.3);
+    color: var(--accent);
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+    padding: 3px 10px;
+    border-radius: 20px;
+    letter-spacing: 0.08em;
+  }
+
+  .result-actions {
+    display: flex;
+    gap: 8px;
+  }
+
+  .btn-ghost {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    border-radius: 8px;
+    padding: 8px 14px;
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    cursor: pointer;
+    transition: all 0.15s;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .btn-ghost:hover {
+    border-color: var(--accent2);
+    color: var(--accent2);
+    background: rgba(0,184,255,0.05);
+  }
+
+  /* Tabs */
+  .tabs {
+    display: flex;
+    gap: 4px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 4px;
+  }
+
+  .tab {
+    flex: 1;
+    text-align: center;
+    padding: 8px 12px;
+    border-radius: 7px;
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    cursor: pointer;
+    color: var(--text-muted);
+    transition: all 0.2s;
+    letter-spacing: 0.05em;
+  }
+
+  .tab.active {
+    background: var(--surface);
+    color: var(--text);
+    border: 1px solid var(--border);
+  }
+
+  /* Flowchart container */
+  .flowchart-wrap {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 24px;
+    overflow: auto;
+    min-height: 300px;
+    position: relative;
+  }
+
+  .flowchart-wrap .mermaid {
+    display: flex;
+    justify-content: center;
+  }
+
+  /* Make mermaid look good on dark bg */
+  .flowchart-wrap svg {
+    max-width: 100%;
+    height: auto;
+  }
+
+  /* Summary panel */
+  .summary-panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 24px;
+    display: none;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .summary-panel.visible { display: flex; }
+
+  .summary-section {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .summary-section h3 {
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    color: var(--text-muted);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 8px;
+  }
+
+  .summary-text {
+    font-size: 14px;
+    color: var(--text-muted);
+    line-height: 1.7;
+  }
+
+  .step-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .step-item {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+  }
+
+  .step-num {
+    width: 24px; height: 24px;
+    border-radius: 6px;
+    background: rgba(0,255,136,0.1);
+    border: 1px solid rgba(0,255,136,0.3);
+    color: var(--accent);
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    margin-top: 1px;
+  }
+
+  .step-text {
+    font-size: 13px;
+    color: var(--text-muted);
+    line-height: 1.6;
+  }
+
+  /* Tech stack chips */
+  .chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .chip {
+    background: rgba(0,184,255,0.08);
+    border: 1px solid rgba(0,184,255,0.2);
+    color: var(--accent2);
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    padding: 4px 10px;
+    border-radius: 6px;
+  }
+
+  /* Raw mermaid tab */
+  .raw-code {
+    background: #020408;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    font-family: 'Space Mono', monospace;
+    font-size: 12px;
+    color: #7ee787;
+    line-height: 1.6;
+    overflow: auto;
+    white-space: pre;
+    display: none;
+    max-height: 400px;
+  }
+
+  .raw-code.visible { display: block; }
+
+  /* Error state */
+  .error-box {
+    background: rgba(255,85,85,0.05);
+    border: 1px solid rgba(255,85,85,0.3);
+    border-radius: 12px;
+    padding: 20px;
+    display: none;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .error-box.visible { display: flex; }
+  .error-box .err-title { color: #ff5555; font-weight: 700; font-size: 14px; }
+  .error-box .err-msg { color: var(--text-muted); font-family: 'Space Mono', monospace; font-size: 12px; line-height: 1.6; }
+
+  /* Footer */
+  footer {
+    text-align: center;
+    padding: 32px 0 0;
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    color: var(--text-dim);
+  }
+
+  footer span { color: var(--accent); }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: var(--surface); }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--text-dim); }
+
+  /* Spinner */
+  .spinner {
+    width: 16px; height: 16px;
+    border: 2px solid rgba(0,0,0,0.3);
+    border-top-color: #000;
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    display: none;
+  }
+  .spinner.visible { display: block; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Provider pills */
+  .provider-pills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .provider-pill {
+    padding: 7px 16px;
+    border-radius: 20px;
+    border: 1px solid var(--border);
+    background: var(--surface2);
+    color: var(--text-muted);
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    cursor: pointer;
+    transition: all 0.15s;
+    letter-spacing: 0.04em;
+    user-select: none;
+  }
+
+  .provider-pill:hover {
+    border-color: var(--accent2);
+    color: var(--accent2);
+  }
+
+  .provider-pill.active {
+    background: rgba(0,255,136,0.1);
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  /* Responsive */
+  @media (max-width: 600px) {
+    .settings-row { grid-template-columns: 1fr; }
+    .result-header { flex-direction: column; align-items: flex-start; }
+  }
+</style>
+</head>
+<body>
+
+<div class="ambient ambient-1"></div>
+<div class="ambient ambient-2"></div>
+
+<div class="container">
+
+  <header>
+    <div class="logo-row">
+      <div class="logo-icon">⬡</div>
+      <div class="logo-text">Git<span>Flow</span></div>
+    </div>
+    <div class="tagline">Understand any codebase in seconds <span class="blink">█</span></div>
+  </header>
+
+  <!-- Input Card -->
+  <div class="input-card">
+
+    <div class="field-group">
+      <label>GitHub Repository URL</label>
+      <input type="text" id="repoUrl" placeholder="https://github.com/user/repo  or  user/repo" />
+    </div>
+
+    <!-- Provider pills -->
+    <div class="field-group">
+      <label>LLM Provider</label>
+      <div class="provider-pills" id="providerPills">
+        <div class="provider-pill active" data-provider="groq">⚡ Groq</div>
+        <div class="provider-pill" data-provider="openai">OpenAI</div>
+        <div class="provider-pill" data-provider="gemini">Gemini</div>
+        <div class="provider-pill" data-provider="anthropic">Anthropic</div>
+        <div class="provider-pill" data-provider="openrouter">OpenRouter</div>
+        <div class="provider-pill" data-provider="ollama">🏠 Ollama</div>
+      </div>
+    </div>
+
+    <div class="settings-row">
+      <div class="field-group">
+        <label id="apiKeyLabel">API Key</label>
+        <input type="password" id="apiKey" placeholder="gsk_..." />
+      </div>
+      <div class="field-group">
+        <label>Model</label>
+        <select id="modelSelect"></select>
+      </div>
+    </div>
+
+    <!-- Ollama base URL (hidden unless ollama selected) -->
+    <div class="field-group" id="ollamaUrlGroup" style="display:none">
+      <label>Ollama Base URL</label>
+      <input type="text" id="ollamaUrl" placeholder="http://localhost:11434" value="http://localhost:11434" />
+    </div>
+
+    <div class="field-group">
+      <label>GitHub Token <span style="color:var(--text-dim)">(optional — private repos / higher rate limits)</span></label>
+      <input type="password" id="githubToken" placeholder="ghp_..." />
+    </div>
+
+    <div class="progress-bar" id="progressBar">
+      <div class="progress-fill" id="progressFill"></div>
+    </div>
+
+    <button class="btn-analyze" id="analyzeBtn" onclick="analyze()">
+      <div class="spinner" id="spinner"></div>
+      <span class="btn-icon" id="btnIcon">⬡</span>
+      <span id="btnText">Generate Flowchart</span>
+    </button>
+  </div>
+
+  <!-- Terminal Log -->
+  <div class="terminal" id="terminal"></div>
+
+  <!-- Error Box -->
+  <div class="error-box" id="errorBox">
+    <div class="err-title">⚠ Analysis Failed</div>
+    <div class="err-msg" id="errorMsg"></div>
+  </div>
+
+  <!-- Result Section -->
+  <div class="result-section" id="resultSection">
+
+    <div class="result-header">
+      <div class="result-title">
+        <span>Execution Flowchart</span>
+        <span class="badge" id="repoBadge">—</span>
+      </div>
+      <div class="result-actions">
+        <button class="btn-ghost" onclick="copyMermaid()">⎘ Copy Code</button>
+        <button class="btn-ghost" onclick="downloadSVG()">↓ SVG</button>
+        <button class="btn-ghost" onclick="resetAll()">↺ New Repo</button>
+      </div>
+    </div>
+
+    <div class="tabs">
+      <div class="tab active" onclick="switchTab('flowchart', this)">⬡ Flowchart</div>
+      <div class="tab" onclick="switchTab('summary', this)">≡ Summary</div>
+      <div class="tab" onclick="switchTab('raw', this)">&lt;/&gt; Mermaid Code</div>
+    </div>
+
+    <!-- Flowchart Tab -->
+    <div id="tab-flowchart">
+      <div class="flowchart-wrap">
+        <div class="mermaid" id="mermaidDiv"></div>
+      </div>
+    </div>
+
+    <!-- Summary Tab -->
+    <div class="summary-panel" id="tab-summary">
+      <div class="summary-section">
+        <h3>What this project does</h3>
+        <div class="summary-text" id="summaryText"></div>
+      </div>
+      <div class="summary-section">
+        <h3>Execution Steps</h3>
+        <div class="step-list" id="stepList"></div>
+      </div>
+      <div class="summary-section">
+        <h3>Tech Stack Detected</h3>
+        <div class="chips" id="techChips"></div>
+      </div>
+    </div>
+
+    <!-- Raw Mermaid Tab -->
+    <div class="raw-code" id="tab-raw"></div>
+
+  </div>
+
+  <footer>
+    <p>GitFlow — Works with <span>Groq · OpenAI · Gemini · Anthropic · OpenRouter · Ollama</span> · Zero backend · Your code never leaves your browser</p>
+  </footer>
+
+</div>
+
+<script>
+  // ── Mermaid init ──────────────────────────────────────────────
+  mermaid.initialize({
+    startOnLoad: false,
+    theme: 'dark',
+    themeVariables: {
+      background: '#0d1117',
+      primaryColor: '#161b22',
+      primaryTextColor: '#e6edf3',
+      primaryBorderColor: '#21262d',
+      lineColor: '#00ff88',
+      secondaryColor: '#0d1117',
+      tertiaryColor: '#161b22',
+      edgeLabelBackground: '#0d1117',
+      clusterBkg: '#161b22',
+      titleColor: '#e6edf3',
+      nodeTextColor: '#e6edf3',
+      mainBkg: '#161b22',
+      nodeBorder: '#00ff88',
+    },
+    flowchart: { curve: 'basis', padding: 20 },
+    fontSize: 14
+  });
+
+  // ── Provider config ───────────────────────────────────────────
+  const PROVIDERS = {
+    groq: {
+      label: 'Groq API Key', placeholder: 'gsk_...',
+      models: [
+        { v: 'llama-3.3-70b-versatile',                      l: 'Llama 3.3 70B — Best Quality' },
+        { v: 'llama-3.1-8b-instant',                         l: 'Llama 3.1 8B — Fastest' },
+        { v: 'meta-llama/llama-4-scout-17b-16e-instruct',    l: 'Llama 4 Scout — Latest' },
+        { v: 'qwen/qwen3-32b',                               l: 'Qwen 3 32B' },
+      ]
+    },
+    openai: {
+      label: 'OpenAI API Key', placeholder: 'sk-...',
+      models: [
+        { v: 'gpt-4o',        l: 'GPT-4o — Best Quality' },
+        { v: 'gpt-4o-mini',   l: 'GPT-4o Mini — Fast & Cheap' },
+        { v: 'gpt-4-turbo',   l: 'GPT-4 Turbo' },
+        { v: 'o3-mini',       l: 'o3-mini — Reasoning' },
+      ]
+    },
+    gemini: {
+      label: 'Gemini API Key', placeholder: 'AIza...',
+      models: [
+        { v: 'gemini-2.0-flash',          l: 'Gemini 2.0 Flash — Fast' },
+        { v: 'gemini-2.5-pro-preview-06-05', l: 'Gemini 2.5 Pro — Best' },
+        { v: 'gemini-1.5-pro',            l: 'Gemini 1.5 Pro' },
+        { v: 'gemini-1.5-flash',          l: 'Gemini 1.5 Flash' },
+      ]
+    },
+    anthropic: {
+      label: 'Anthropic API Key', placeholder: 'sk-ant-...',
+      models: [
+        { v: 'claude-sonnet-4-5',   l: 'Claude Sonnet 4.5 — Best' },
+        { v: 'claude-haiku-4-5',    l: 'Claude Haiku 4.5 — Fast' },
+        { v: 'claude-opus-4-5',     l: 'Claude Opus 4.5 — Most Powerful' },
+      ]
+    },
+    openrouter: {
+      label: 'OpenRouter API Key', placeholder: 'sk-or-...',
+      models: [
+        { v: 'meta-llama/llama-3.3-70b-instruct',   l: 'Llama 3.3 70B' },
+        { v: 'google/gemini-2.0-flash-001',          l: 'Gemini 2.0 Flash' },
+        { v: 'deepseek/deepseek-r1',                 l: 'DeepSeek R1' },
+        { v: 'mistralai/mistral-large',              l: 'Mistral Large' },
+        { v: 'anthropic/claude-sonnet-4-5',          l: 'Claude Sonnet 4.5' },
+      ]
+    },
+    ollama: {
+      label: 'Model Name (no key needed)', placeholder: 'leave blank',
+      models: [
+        { v: 'llama3.3',     l: 'Llama 3.3' },
+        { v: 'llama3.1',     l: 'Llama 3.1' },
+        { v: 'qwen3',        l: 'Qwen 3' },
+        { v: 'deepseek-r1',  l: 'DeepSeek R1' },
+        { v: 'mistral',      l: 'Mistral' },
+        { v: 'codellama',    l: 'CodeLlama' },
+      ]
+    }
+  };
+
+  let currentProvider = 'groq';
+
+  function initProviderUI() {
+    // Pill click handlers
+    document.querySelectorAll('.provider-pill').forEach(pill => {
+      pill.addEventListener('click', () => {
+        document.querySelectorAll('.provider-pill').forEach(p => p.classList.remove('active'));
+        pill.classList.add('active');
+        currentProvider = pill.dataset.provider;
+        updateProviderFields();
+      });
+    });
+    updateProviderFields();
+  }
+
+  function updateProviderFields() {
+    const cfg = PROVIDERS[currentProvider];
+    document.getElementById('apiKeyLabel').textContent = cfg.label;
+    document.getElementById('apiKey').placeholder = cfg.placeholder;
+
+    // Ollama URL field
+    document.getElementById('ollamaUrlGroup').style.display =
+      currentProvider === 'ollama' ? 'block' : 'none';
+
+    // Rebuild model select
+    const sel = document.getElementById('modelSelect');
+    sel.innerHTML = cfg.models.map(m =>
+      `<option value="${m.v}">${m.l}</option>`
+    ).join('');
+  }
+
+  // ── Multi-provider LLM call ───────────────────────────────────
+  async function callLLM(systemPrompt, userPrompt) {
+    const apiKey = document.getElementById('apiKey').value.trim();
+    const model  = document.getElementById('modelSelect').value;
+
+    switch (currentProvider) {
+      case 'groq':      return callOpenAICompat('https://api.groq.com/openai/v1/chat/completions', apiKey, model, systemPrompt, userPrompt);
+      case 'openai':    return callOpenAICompat('https://api.openai.com/v1/chat/completions', apiKey, model, systemPrompt, userPrompt);
+      case 'openrouter':return callOpenAICompat('https://openrouter.ai/api/v1/chat/completions', apiKey, model, systemPrompt, userPrompt);
+      case 'ollama':    return callOllama(model, systemPrompt, userPrompt);
+      case 'gemini':    return callGemini(apiKey, model, systemPrompt, userPrompt);
+      case 'anthropic': return callAnthropic(apiKey, model, systemPrompt, userPrompt);
+      default: throw new Error('Unknown provider');
+    }
+  }
+
+  async function callOpenAICompat(url, apiKey, model, systemPrompt, userPrompt) {
+    const headers = { 'Content-Type': 'application/json' };
+    if (apiKey) headers['Authorization'] = `Bearer ${apiKey}`;
+    const res = await fetch(url, {
+      method: 'POST', headers,
+      body: JSON.stringify({
+        model, max_tokens: 3000, temperature: 0.2,
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user',   content: userPrompt   }
+        ]
+      })
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error?.message || `API error ${res.status}`);
+    }
+    const data = await res.json();
+    return data.choices[0].message.content;
+  }
+
+  async function callGemini(apiKey, model, systemPrompt, userPrompt) {
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        system_instruction: { parts: [{ text: systemPrompt }] },
+        contents: [{ parts: [{ text: userPrompt }] }],
+        generationConfig: { maxOutputTokens: 3000, temperature: 0.2 }
+      })
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error?.message || `Gemini API error ${res.status}`);
+    }
+    const data = await res.json();
+    return data.candidates[0].content.parts[0].text;
+  }
+
+  async function callAnthropic(apiKey, model, systemPrompt, userPrompt) {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify({
+        model, max_tokens: 3000,
+        system: systemPrompt,
+        messages: [{ role: 'user', content: userPrompt }]
+      })
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error?.message || `Anthropic API error ${res.status}`);
+    }
+    const data = await res.json();
+    return data.content[0].text;
+  }
+
+  async function callOllama(model, systemPrompt, userPrompt) {
+    const base = document.getElementById('ollamaUrl').value.trim() || 'http://localhost:11434';
+    const res = await fetch(`${base}/api/chat`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model, stream: false,
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user',   content: userPrompt   }
+        ]
+      })
+    });
+    if (!res.ok) throw new Error(`Ollama error ${res.status} — is Ollama running?`);
+    const data = await res.json();
+    return data.message.content;
+  }
+
+  // ── State ─────────────────────────────────────────────────────
+  let currentMermaid = '';
+  let currentTab = 'flowchart';
+
+  // ── Logging ───────────────────────────────────────────────────
+  function log(msg, type = '') {
+    const term = document.getElementById('terminal');
+    term.classList.add('visible');
+    const line = document.createElement('div');
+    line.className = 'log-line';
+    line.innerHTML = `<span class="log-prefix">$</span><span class="log-text ${type}">${msg}</span>`;
+    term.appendChild(line);
+    term.scrollTop = term.scrollHeight;
+  }
+
+  function setProgress(pct) {
+    document.getElementById('progressBar').classList.add('visible');
+    document.getElementById('progressFill').style.width = pct + '%';
+  }
+
+  function showError(msg) {
+    const box = document.getElementById('errorBox');
+    document.getElementById('errorMsg').textContent = msg;
+    box.classList.add('visible');
+  }
+
+  function setLoading(on) {
+    const btn = document.getElementById('analyzeBtn');
+    const spinner = document.getElementById('spinner');
+    const icon = document.getElementById('btnIcon');
+    const text = document.getElementById('btnText');
+    btn.disabled = on;
+    spinner.classList.toggle('visible', on);
+    icon.style.display = on ? 'none' : 'inline';
+    text.textContent = on ? 'Analyzing...' : 'Generate Flowchart';
+  }
+
+  // ── GitHub helpers ────────────────────────────────────────────
+  function parseRepo(input) {
+    input = input.trim();
+    const m = input.match(/github\.com\/([^\/]+\/[^\/\s]+)/);
+    if (m) return m[1].replace(/\.git$/, '');
+    if (/^[^\/]+\/[^\/]+$/.test(input)) return input;
+    return null;
+  }
+
+  async function ghFetch(url, token) {
+    const headers = { Accept: 'application/vnd.github.v3+json' };
+    if (token) headers['Authorization'] = `token ${token}`;
+    const res = await fetch(url, { headers });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.message || `GitHub API error ${res.status}`);
+    }
+    return res.json();
+  }
+
+  async function getTree(repo, token) {
+    const repoData = await ghFetch(`https://api.github.com/repos/${repo}`, token);
+    const branch = repoData.default_branch;
+    log(`Default branch: ${branch}`, 'info');
+    const tree = await ghFetch(
+      `https://api.github.com/repos/${repo}/git/trees/${branch}?recursive=1`,
+      token
+    );
+    return tree.tree;
+  }
+
+  function prioritizeFiles(tree) {
+    const priority = [
+      /readme/i, /main\.(py|js|ts|go|rs|java|rb|php|cs|cpp|c)$/i,
+      /app\.(py|js|ts|jsx|tsx)$/i, /index\.(py|js|ts|jsx|tsx)$/i,
+      /server\.(py|js|ts)$/i, /cli\.(py|js|ts)$/i,
+      /routes?\.(py|js|ts)$/i, /pipeline\.(py|js|ts)$/i,
+      /agent\.(py|js|ts)$/i, /graph\.(py|js|ts)$/i,
+      /workflow\.(py|js|ts)$/i, /chain\.(py|js|ts)$/i,
+      /\.(py|js|ts|go|rs|java|rb|php|cs)$/i
+    ];
+    const files = tree.filter(f => f.type === 'blob' && f.path);
+    const scored = files.map(f => {
+      let score = 0;
+      for (let i = 0; i < priority.length; i++) {
+        if (priority[i].test(f.path)) { score = priority.length - i; break; }
+      }
+      // Penalize deeply nested or generated files
+      const depth = f.path.split('/').length;
+      if (f.path.includes('node_modules') || f.path.includes('.git') ||
+          f.path.includes('dist/') || f.path.includes('build/') ||
+          f.path.includes('__pycache__') || f.path.includes('.egg-info')) score = -1;
+      return { ...f, score: score - depth * 0.1 };
+    });
+    return scored
+      .filter(f => f.score > 0)
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 18);
+  }
+
+  async function fetchFileContent(repo, path, token) {
+    try {
+      const data = await ghFetch(
+        `https://api.github.com/repos/${repo}/contents/${path}`,
+        token
+      );
+      if (data.encoding === 'base64') {
+        const decoded = atob(data.content.replace(/\n/g, ''));
+        return decoded.slice(0, 3000); // limit per file
+      }
+      return '';
+    } catch { return ''; }
+  }
+
+  // ── Mermaid sanitizer ─────────────────────────────────────────
+  function sanitizeMermaid(code) {
+    const lines = code.split('\n');
+    const out = [];
+    const nodeIdMap = {};
+    let idCounter = 0;
+
+    for (let line of lines) {
+      // Skip empty lines inside subgraphs but keep structure
+      let trimmed = line.trim();
+
+      // Fix node labels: replace em-dash, smart quotes, backticks
+      line = line
+        .replace(/[""]/g, '"')
+        .replace(/['']/g, "'")
+        .replace(/–|—/g, '-')
+        .replace(/`/g, "'");
+
+      // Fix node IDs that start with numbers or contain spaces/special chars
+      // Pattern: match nodeID followed by shape brackets  e.g.  1_Start[label]
+      line = line.replace(/\b([A-Za-z0-9_]+)\[([^\]]*)\]/g, (match, id, label) => {
+        // if id starts with digit, prefix with 'N'
+        const safeId = /^\d/.test(id) ? 'N' + id : id;
+        // escape special chars inside label — keep it as text
+        const safeLabel = label.replace(/[<>{}|]/g, ' ');
+        return `${safeId}["${safeLabel}"]`;
+      });
+
+      // Fix diamond shapes
+      line = line.replace(/\b([A-Za-z0-9_]+)\{([^}]*)\}/g, (match, id, label) => {
+        const safeId = /^\d/.test(id) ? 'N' + id : id;
+        const safeLabel = label.replace(/[<>{}|]/g, ' ');
+        return `${safeId}{"${safeLabel}"}`;
+      });
+
+      // Fix rounded shapes  
+      line = line.replace(/\b([A-Za-z0-9_]+)\(\(([^)]*)\)\)/g, (match, id, label) => {
+        const safeId = /^\d/.test(id) ? 'N' + id : id;
+        return `${safeId}(("${label}"))`;
+      });
+
+      line = line.replace(/\b([A-Za-z0-9_]+)\(([^)]*)\)/g, (match, id, label) => {
+        const safeId = /^\d/.test(id) ? 'N' + id : id;
+        return `${safeId}("${label}")`;
+      });
+
+      // Fix arrow labels with special chars: -->|label with colons|
+      line = line.replace(/\|([^|]*)\|/g, (match, label) => {
+        const safe = label.replace(/[<>{}[\]]/g, ' ');
+        return `|${safe}|`;
+      });
+
+      out.push(line);
+    }
+    return out.join('\n');
+  }
+
+  // ── Mermaid rendering ─────────────────────────────────────────
+  async function renderMermaid(code) {
+    const container = document.getElementById('mermaidDiv');
+    container.innerHTML = '';
+
+    const sanitized = sanitizeMermaid(code);
+    // Update the raw tab with sanitized code too
+    document.getElementById('tab-raw').textContent = sanitized;
+    currentMermaid = sanitized;
+
+    try {
+      const { svg } = await mermaid.render('gitflow-svg', sanitized);
+      container.innerHTML = svg;
+    } catch (e1) {
+      log('First render attempt failed, trying simplified...', '');
+      // Try stripping subgraphs
+      const stripped = sanitized
+        .split('\n')
+        .filter(l => !/^subgraph|^end\b/i.test(l.trim()))
+        .join('\n');
+      try {
+        const { svg } = await mermaid.render('gitflow-svg-2', stripped);
+        container.innerHTML = svg;
+        log('Rendered without subgraphs', 'info');
+      } catch (e2) {
+        // Last resort: show error with the actual error message
+        container.innerHTML = `
+          <div style="padding:20px;color:#ff5555;font-family:monospace;font-size:12px;line-height:1.6">
+            <div style="color:#ff5555;font-weight:bold;margin-bottom:8px">⚠ Render Error</div>
+            <div style="color:#7d8590">Mermaid could not parse the generated diagram.<br>
+            Check the <strong style="color:#00b8ff">Mermaid Code</strong> tab and paste it at 
+            <a href="https://mermaid.live" target="_blank" style="color:#00ff88">mermaid.live</a> to debug.</div>
+            <div style="margin-top:12px;color:#3d444d;font-size:11px">${e2.message}</div>
+          </div>`;
+      }
+    }
+  }
+
+  function extractMermaid(raw) {
+    // Try fenced code block first (```mermaid or just ```)
+    const fenced = raw.match(/```(?:mermaid)?\s*\n?([\s\S]*?)```/);
+    if (fenced) return fenced[1].trim();
+    // Look for flowchart/graph keyword
+    const lines = raw.split('\n');
+    const start = lines.findIndex(l => /^(flowchart|graph)\s+(TD|LR|TB|BT|RL)/i.test(l.trim()));
+    if (start !== -1) return lines.slice(start).join('\n').trim();
+    // Last resort: return as-is but prepend flowchart TD if missing
+    if (!/^(flowchart|graph)/i.test(raw.trim())) {
+      return 'flowchart TD\n' + raw.trim();
+    }
+    return raw.trim();
+  }
+
+  function extractJSON(raw) {
+    const match = raw.match(/```(?:json)?\s*([\s\S]*?)```/);
+    if (match) {
+      try { return JSON.parse(match[1].trim()); } catch {}
+    }
+    try { return JSON.parse(raw.trim()); } catch {}
+    return null;
+  }
+
+  // ── Tab switching ─────────────────────────────────────────────
+  function switchTab(tab, el) {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    el.classList.add('active');
+    currentTab = tab;
+
+    document.getElementById('tab-flowchart').style.display = tab === 'flowchart' ? 'block' : 'none';
+
+    const summaryEl = document.getElementById('tab-summary');
+    summaryEl.style.display = tab === 'summary' ? 'flex' : 'none';
+    summaryEl.classList.toggle('visible', tab === 'summary');
+
+    const rawEl = document.getElementById('tab-raw');
+    rawEl.style.display = tab === 'raw' ? 'block' : 'none';
+    rawEl.classList.toggle('visible', tab === 'raw');
+  }
+
+  // ── Copy / Download ───────────────────────────────────────────
+  function copyMermaid() {
+    navigator.clipboard.writeText(currentMermaid).then(() => {
+      const btn = event.target;
+      btn.textContent = '✓ Copied!';
+      setTimeout(() => btn.textContent = '⎘ Copy Code', 1500);
+    });
+  }
+
+  function downloadSVG() {
+    const svg = document.querySelector('#mermaidDiv svg');
+    if (!svg) return;
+    const blob = new Blob([svg.outerHTML], { type: 'image/svg+xml' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'gitflow.svg';
+    a.click();
+  }
+
+  function resetAll() {
+    document.getElementById('resultSection').classList.remove('visible');
+    document.getElementById('errorBox').classList.remove('visible');
+    document.getElementById('terminal').classList.remove('visible');
+    document.getElementById('terminal').innerHTML = '';
+    document.getElementById('progressBar').classList.remove('visible');
+    document.getElementById('progressFill').style.width = '0%';
+  }
+
+  // ── Main analyze ──────────────────────────────────────────────
+  async function analyze() {
+    const repoInput   = document.getElementById('repoUrl').value;
+    const apiKey      = document.getElementById('apiKey').value.trim();
+    const githubToken = document.getElementById('githubToken').value.trim() || null;
+
+    // Validate
+    if (!repoInput) { alert('Please enter a GitHub repo URL'); return; }
+    if (!apiKey && currentProvider !== 'ollama') { alert(`Please enter your ${PROVIDERS[currentProvider].label}`); return; }
+
+    const repo = parseRepo(repoInput);
+    if (!repo) { alert('Invalid GitHub URL. Use: user/repo or full GitHub URL'); return; }
+
+    // Reset UI
+    resetAll();
+    setLoading(true);
+    setProgress(5);
+
+    try {
+      // Step 1: Fetch repo tree
+      log(`Fetching repo: ${repo}`);
+      const tree = await getTree(repo, githubToken);
+      log(`Found ${tree.length} files in repo`, 'info');
+      setProgress(20);
+
+      // Step 2: Prioritize important files
+      const keyFiles = prioritizeFiles(tree);
+      log(`Selected ${keyFiles.length} key files to analyze`, 'info');
+      setProgress(30);
+
+      // Step 3: Fetch file contents
+      log('Reading file contents...');
+      const fileContents = [];
+      for (let i = 0; i < keyFiles.length; i++) {
+        const f = keyFiles[i];
+        const content = await fetchFileContent(repo, f.path, githubToken);
+        if (content) {
+          fileContents.push({ path: f.path, content });
+          log(`  → ${f.path}`);
+        }
+        setProgress(30 + Math.floor((i / keyFiles.length) * 30));
+      }
+      setProgress(60);
+
+      // Step 4: Generate flowchart
+      log(`Sending to ${currentProvider} for analysis...`, 'info');
+      const codeContext = fileContents.map(f =>
+        `=== FILE: ${f.path} ===\n${f.content}`
+      ).join('\n\n');
+
+      const systemPrompt = `You are an expert software architect. Produce a Mermaid.js flowchart showing how a codebase works.
+
+CRITICAL OUTPUT FORMAT:
+- Output ONLY a fenced code block, nothing else
+- Start exactly with: \`\`\`mermaid
+- End exactly with: \`\`\`
+- First line inside block must be: flowchart TD
+
+CRITICAL MERMAID SYNTAX (violations cause parse errors):
+- Node IDs: letters and digits ONLY — no spaces, no hyphens, no underscores at start, never start with a digit
+  GOOD: A, B1, NodeA, StartApp   BAD: 1A, my-node, _node, start node
+- Node labels MUST use double quotes: A["My Label Here"]
+- Decision nodes: D{"Is valid?"}
+- Arrows: A --> B  or  A -->|"edge label"| B
+- Subgraph: subgraph SG1["Group Name"]  ...  end
+- NO em-dashes (—), NO smart quotes, NO backticks in ANY label
+- Keep labels under 6 words each
+- Max 18 nodes total
+- NO parallelogram syntax /text/ — use rectangles instead`;
+
+      const userPrompt = `Analyze this GitHub repository: ${repo}
+
+FILES:
+${codeContext}
+
+Generate a Mermaid flowchart showing the EXECUTION FLOW:
+- Entry point / how it starts
+- Main processing steps in order
+- Key decision points
+- Output / result
+
+REMEMBER: Output ONLY the \`\`\`mermaid ... \`\`\` block, nothing else.`;
+
+      const mermaidRaw  = await callLLM(systemPrompt, userPrompt);
+      const mermaidCode = extractMermaid(mermaidRaw);
+      currentMermaid    = mermaidCode;
+      setProgress(80);
+
+      // Step 5: Generate summary JSON
+      log('Generating summary...', 'info');
+      const summaryPrompt = `Based on the repository ${repo} and its files, return a JSON object:
+{
+  "description": "1-2 sentence plain English description of what this project does",
+  "steps": ["step 1", "step 2", ...],
+  "techStack": ["technology1", "technology2", ...]
+}
+5-8 steps. TechStack = frameworks/libraries/tools detected.
+Return ONLY valid JSON, no markdown, no explanation.
+
+Files: ${fileContents.map(f => f.path).join(', ')}
+Snippets:
+${fileContents.slice(0, 3).map(f => f.path + ':\n' + f.content.slice(0, 400)).join('\n\n')}`;
+
+      let summaryData = null;
+      try {
+        const summaryRaw = await callLLM(
+          'You are a code analyzer. Return only valid JSON, no markdown fences, no explanation.',
+          summaryPrompt
+        );
+        summaryData = extractJSON(summaryRaw);
+      } catch { log('Summary skipped', ''); }
+
+      setProgress(95);
+
+      // Step 6: Render
+      log('Rendering flowchart...', 'info');
+      await renderMermaid(mermaidCode);
+
+      // Populate summary
+      if (summaryData) {
+        document.getElementById('summaryText').textContent = summaryData.description || '';
+        const stepList = document.getElementById('stepList');
+        stepList.innerHTML = '';
+        (summaryData.steps || []).forEach((s, i) => {
+          stepList.innerHTML += `
+            <div class="step-item">
+              <div class="step-num">${i + 1}</div>
+              <div class="step-text">${s}</div>
+            </div>`;
+        });
+        const chips = document.getElementById('techChips');
+        chips.innerHTML = (summaryData.techStack || []).map(t => `<div class="chip">${t}</div>`).join('');
+      }
+
+      // Show result
+      document.getElementById('repoBadge').textContent = repo;
+      document.getElementById('resultSection').classList.add('visible');
+
+      // Reset tabs
+      document.querySelectorAll('.tab').forEach((t, i) => t.classList.toggle('active', i === 0));
+      document.getElementById('tab-flowchart').style.display = 'block';
+      document.getElementById('tab-summary').style.display = 'none';
+      document.getElementById('tab-raw').style.display = 'none';
+
+      setProgress(100);
+      log(`Done! Flowchart generated for ${repo}`, 'success');
+
+    } catch (err) {
+      log(`Error: ${err.message}`, 'error');
+      showError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  // ── Init ──────────────────────────────────────────────────────
+  initProviderUI();
+
+  // Enter key support
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && document.activeElement.tagName === 'INPUT') analyze();
+  });
+</script>
+</body>
+</html>
