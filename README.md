@@ -16,7 +16,7 @@
 
 ---
 
-![Screenshot](screenshot(2).png)
+![Screenshot](screenshots.png)
 
 ## What is GitFlow?
 
