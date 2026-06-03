@@ -210,11 +210,6 @@ gitflow.html   (single file, ~1400 lines)
 - [ ] Save/load previous analyses
 - [ ] Custom prompt templates per project type
 
----
-
-## License
-
-MIT — use it however you want.
 
 ---
 
