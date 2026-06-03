@@ -16,6 +16,8 @@
 
 ---
 
+![Screenshot](screenshot%20(2).png)
+
 ## What is GitFlow?
 
 GitFlow turns any GitHub repository into an **interactive execution flowchart** — showing you how the project actually works, step by step, not just what files it contains.
